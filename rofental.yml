@@ -15,10 +15,45 @@ input_data:
     format: csv
     crs: "epsg:32632"
 
+output_data:
+  grids:
+    format: geotiff # Output format (ascii, geotiff or netcdf)
+    variables:
+      # Temperature (monthly mean)
+      - var: meteo.temp
+        freq: M
+        agg: mean
+
+      # Precipitation (monthly sum)
+      - var: meteo.precip
+        freq: M
+        agg: sum
+
+      # SWE (daily)
+      - var: snow.swe
+        freq: D
+
+  timeseries:
+    format: csv
+
 meteo:
   interpolation:
     temperature:
       trend_method: fixed
+      extrapolate: true
+      lapse_rate:
+        - -0.0026
+        - -0.0035
+        - -0.0047
+        - -0.0053
+        - -0.0052
+        - -0.0053
+        - -0.0049
+        - -0.0047
+        - -0.0042
+        - -0.0033
+        - -0.0035
+        - -0.0031
 
     precipitation:
       trend_method: fractional
@@ -35,25 +70,101 @@ meteo:
         - 0.00033
         - 0.00041
         - 0.00046
+      extrapolate: true
 
     humidity:
       trend_method: fixed
+      extrapolate: true
+      lapse_rate:
+        - -0.0044
+        - -0.0046
+        - -0.0049
+        - -0.0048
+        - -0.0046
+        - -0.0047
+        - -0.0043
+        - -0.0042
+        - -0.0045
+        - -0.0044
+        - -0.0047
+        - -0.0046
 
     cloudiness:
       day_method: clear_sky_fraction
       night_method: constant
+      allow_fallback: true
+
+    wind_speed:
+      trend_method: regression
+      extrapolate: false
 
   precipitation_correction:
     - method: kochendorfer
       gauge: us_un
     - method: srf
 
-output_data:
-  grids:
-    format: geotiff
-    variables:
-      #- var: snow.swe
-      #  freq: D
+  precipitation_phase:
+    method: wet_bulb_temp
+    threshold_temp: 273.65
+    temp_range: 1.
+
+  radiation:
+    snow_emissivity: 0.99
+    cloud_emissivity: 0.976
+    rock_emission_factor: 0.01
+    ozone_layer_thickness: 0.0035
+    atmospheric_visibility: 25000.
+    single_scattering_albedo: 0.9
+    clear_sky_albedo: 0.0685
+    num_shadow_sweeps: 1
+
+  measurement_height:
+    temperature: 2
+    wind: 10
+
+  stability_correction: false
+  stability_adjustment_parameter: 5.
 
 snow:
   model: cryolayers
+  thermal_conductivity: 0.24
+  roughness_length: 0.01
+  measurement_height_adjustment: false
+  snow_cover_fraction_depth_scale: 1.e-6
+
+  cryolayers:
+    cold_holding_capacity: 0.05
+    refreezing_factor: 1.
+    surface_heat_flux: -2.
+    transition:
+      old_snow: 200.
+      firn: 10
+      ice: 900.
+
+  albedo:
+    method: snow_age
+    min: 0.55
+    max: 0.85
+    firn: 0.4
+    ice: 0.2
+    cold_snow_decay_timescale: 480
+    melting_snow_decay_timescale: 200
+    decay_timescale_determination_temperature: surface
+    refresh_snowfall: 0.5
+    refresh_method: binary
+
+  compaction:
+    method: anderson
+    timescale: 200
+    max_cold_density: 300
+    max_melting_density: 500
+
+  liquid_water_content:
+    method: pore_volume_fraction
+    max: 0.03
+
+  melt:
+    method: energy_balance
+    threshold_temp: 273.15
+    degree_day_factor:
+    albedo_factor:

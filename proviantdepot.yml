@@ -1,76 +1,91 @@
 domain: proviantdepot
 start_date: 2019-10-05
 end_date: 2020-06-30
-resolution: 5
-timestep: H
-crs: "epsg:32632"
-timezone: 1
-results_dir: results/proviantdepot
+resolution: 5 # spatial resolution (m)
+timestep: H # temporal resolution as a pandas-compatible frequency string (e.g., "H", "3H", "D")
+crs: "epsg:32632" # CRS of the input grids
+timezone: 1 # timezone of the model domain (difference to UTC in h)
+results_dir: results/proviantdepot # directory for storing the model outputs
 
+# Input data configuration
 input_data:
   grids:
-    dir: data/proviantdepot
+    dir: data/proviantdepot # location of the input grids (DEM, ROI etc.)
 
   meteo:
-    dir: meteo
-    format: csv
-    crs: "epsg:32632"
+    dir: meteo # location of the meteorological input data
+    format: csv # input format (csv or netcdf)
+    crs: "epsg:32632" # CRS of the station coordinates (when using CSV format)
 
+# Output data configuration
 output_data:
+  # Time series (point) outputs configuration
   timeseries:
-    format: csv
+    format: csv # output format (csv or netcdf)
 
 meteo:
+  # Precipitation phase determination parameters
   precipitation_phase:
-    method: wet_bulb_temp
-    threshold_temp: 273.65
-    temp_range: 0.5
+    method: wet_bulb_temp # use wet-bulb temperature for precipitation phase determination
+    threshold_temp: 273.65 # threshold temperature (K) in which 50% of precipitation falls as snow
+    temp_range: 0.5 # temperature range in which mixed precipitation can occur
 
+  # Parameters for adjusting precipitation for wind-induced undercatch and snow redistribution
   precipitation_correction:
-    - method: kochendorfer
-      gauge: us_un
+    - method: kochendorfer # use the Kochendorfer et al. (2017) transfer functions
+      gauge: us_un # gauge-specific transfer function to use according to Kochendorfer et al. (2017, Table 3)
 
+  stability_correction: false # adjust turbulent fluxes for atmospheric stability
+  stability_adjustment_parameter: 5. # adjustment parameter for atmospheric stability correction
+
+# Snow parameters
 snow:
-  model: cryolayers
+  model: cryolayers # snow scheme (multilayer or cryolayers)
+  thermal_conductivity: 0.24 # snow thermal conductivity (W m-1 K-1)
+  roughness_length: 0.01 # roughness length of snow-covered ground (m)
+  measurement_height_adjustment: false # adjust the temperature measurement height for snow depth
+  snow_cover_fraction_depth_scale: 1.e-6 # snow cover fraction depth scale (m)
 
-  thermal_conductivity: 0.24
-  roughness_length: 0.01
-  measurement_height_adjustment: false
-  snow_cover_fraction_depth_scale: 1.e-6
-
+  # Parameters for the cryo layer model
   cryolayers:
-    cold_holding_capacity: 0.03
-    refreezing_factor: 1.
-    surface_heat_flux: -2.
+    cold_holding_capacity: 0.03 # cold holding capacity (as a fraction of the layer SWE) and refreezing factor for the cold content approach by Braun (1984)
+    refreezing_factor: 1. # fraction of available energy that is used for building up cold content and refreezing liquid water
+    surface_heat_flux: -2. # surface heat flux for snow-covered conditions (W m-2)
     transition:
-      old_snow: 200.
-      firn: 10
-      ice: 900.
+      old_snow: 200. # new snow -> old snow transition (density, kg m-3)
+      firn: 10 # old snow -> firn transition (calendar month)
+      ice: 900. # firn -> ice transition (density, kg m-3)
 
+  # Albedo parameters
   albedo:
     method: snow_age
-    min: 0.55
-    max: 0.85
-    firn: 0.4
-    ice: 0.2
-    cold_snow_decay_timescale: 480
-    melting_snow_decay_timescale: 160
-    decay_timescale_determination_temperature: surface
-    refresh_snowfall: 0.5
-    refresh_method: binary
+    min: 0.55 # minimum snow albedo
+    max: 0.85 # maximum snow albedo
+    firn: 0.4 # firn albedo (constant)
+    ice: 0.2 # ice albedo (constant)
+    cold_snow_decay_timescale: 480 # albedo decay timescale for cold (T < 0 °C) snow (h)
+    melting_snow_decay_timescale: 200 # albedo decay timescale for melting snow (h)
+    decay_timescale_determination_temperature: surface # use surface temperature to distinguish between cold and melting snow
+    refresh_snowfall: 0.5 # snowfall amount for resetting albedo to the maximum value (kg m-2 h-1)
+    refresh_method: binary # binary or continuous
 
+  # Snow compaction parameters
   compaction:
-    method: anderson
-    timescale: 200
-    max_cold_density: 300
-    max_melting_density: 500
+    method: anderson # anderson or empirical
 
+    # Parameters for method "empirical"
+    timescale: 200 # snow compaction timescale (h)
+    max_cold_density: 300 # maximum density for cold (T < 0 °C) snow (kg m-3)
+    max_melting_density: 500 # maximum density for melting snow (kg m-3)
+
+  # Liquid water content parameters
   liquid_water_content:
-    method: pore_volume_fraction
-    max: 0.06
+    method: pore_volume_fraction # pore_volume_fraction or mass_fraction
+    max: 0.06 # maximum liquid water content as a fraction of the total pore volume or mass
 
+  # Melt parameters
   melt:
-    method: energy_balance
-    threshold_temp: 273.15
-    degree_day_factor:
-    albedo_factor:
+    method: energy_balance # melt method (energy_balance, temperature_index or enhanced_temperature_index)
+    threshold_temp: 273.15 # threshold temperature for the temperature index methods (K)
+    degree_day_factor: 1.2 # degree day factor for the temperature index methods (kg m-2 d-1 K-1)
+    albedo_factor: 0.1 # albedo factor for the enhanced temperature index method (m2 kg m-2 W-1 d-1)
